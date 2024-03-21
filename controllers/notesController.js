@@ -24,6 +24,7 @@ const getNotesController = async (req, res) => {
 const addNoteController = async (req, res) => {
     try {
         const obj = req.body;
+        console.log(obj);
         const alreadyPresent = await notesModel.findOne({ title: obj.title });
         if (alreadyPresent) {
             res.status(400).json({ message: "Note is already added" });
@@ -56,13 +57,19 @@ const updateNoteController = async (req, res) => {
 const deleteNoteController = async (req, res) => {
     try {
         const deleteId = req.query.id;
+        console.log(deleteId);
         const note = await notesModel.findById(deleteId);
         if(!note) {
             throw new Error('Note does not exist.');
         }
         if(note.user_id.toString() !== req.id) throw new Error("You don't have permission to delete this note");
-        await notesModel.deleteOne({_id: deleteId});
-        res.status(200).json({ message: "Note updated successfully" });
+        
+        if(Array.isArray(deleteId)) {
+            console.log(deleteId);
+            await notesModel.remove({user_id: req.id, id: {$in: deleteId}});
+        }
+        else await notesModel.deleteOne({_id: deleteId});
+        res.status(200).json({ message: "Note Deleted successfully" });
     } catch (error) {
         res.status(404).json({ message: "Route not found", data: null, error });
     }
@@ -77,4 +84,20 @@ const latestUpdatedController = async (req, res) => {
     }
 }
 
-export { getNotesController, addNoteController, updateNoteController, deleteNoteController, latestUpdatedController};
+const hideNotesController = async (req, res) => {
+    try {
+        if(req.query.hidden === "true"){
+            const hiddenNotes = await notesModel.find({isHide: true, user_id: req.id});
+            res.status(200).json({ message: "Hidded Notes", data: hiddenNotes }); 
+        }
+        else if(req.query.visible === "true"){
+            const visibleNotes = await notesModel.find({isHide: false, user_id: req.id});
+            res.status(200).json({ message: "Visible Notes", data: visibleNotes }); 
+        }
+        else throw new Error ("Give Hidden or Visible ");
+    } catch (error) {
+        res.status(404).json({message: error});
+    }
+}
+
+export { getNotesController, addNoteController, updateNoteController, deleteNoteController, latestUpdatedController, hideNotesController};

@@ -13,16 +13,13 @@ const notesSchema = new mongoose.Schema({
     description: {
         type: String,
         required: true
+    },
+    isHide: {
+        type: Boolean,
+        required: true,
+        default: false
     }
 }, {timestamps: true});
 
 const notesModel = mongoose.model("notes", notesSchema);
 export default notesModel;
-
-/* 
-user_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'users'
-}
- */
