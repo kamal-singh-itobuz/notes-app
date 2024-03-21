@@ -1,27 +1,21 @@
 import notesModel from "../models/notesModel.js";
 
-const getAllNotesController = async (req, res) => {
+const getNotesController = async (req, res) => {
     try {
         if(req.query.search) {
             const value = req.query.search;
             const searchRegex = new RegExp(value, 'i');
             const data = (await notesModel.find({title: {$regex: searchRegex}, user_id: req.id}));
-            res.status(200).json({ message: `Result for search ${value} `, data: data });
-            return;
+            return res.status(200).json({ message: `Result for search ${value} `, data: data }); 
+        }
+        else if(req.query.id) {
+            const oneId = req.query.id;
+            const oneNote = await notesModel.findOne({_id: oneId, user_id: req.id});
+            return res.status(200).send({ message: "Note found successfully", data: oneNote });
         }
         const allNotes = await notesModel.find({user_id: req.id}); //here req.id, we are sending after successful token verification of a current user
         res.status(200).json({ message: "All notes fetched", data: allNotes });
-    } catch (error) {
-        res.status(404).json({ message: "Route not found", data: null, error });
-    }
-}
-
-const getOneNoteController = async (req, res) => {
-    try {
-        const noteTitle = req.params.title;
-        const note = await notesModel.findOne({title: noteTitle, user_id: req.id});
-        if(!note) throw new Error('Note is not found');
-        res.status(200).json({ message: "Note is found", data: note });
+        
     } catch (error) {
         res.status(404).json({ message: "Route not found", data: null, error });
     }
@@ -46,22 +40,22 @@ const addNoteController = async (req, res) => {
 
 const updateNoteController = async (req, res) => {
     try {
-        const updateId = req.params.id;
+        const updateId = req.query.id;
         const note = await notesModel.findById(updateId);
         if(!note) {
-            throw new Error('Note does not exist.');
+            throw new Error("Note does not exist.");
         }
         if(note.user_id.toString() !== req.id) throw new Error("You don't have permission to update this note");
-        await notesModel.updateOne({_id: updateId});
-        res.status(200).json({ message: "Note updated successfully" });
+        await notesModel.updateOne({_id: updateId}, {$set: req.body});
+        return res.status(200).send({ message: "Note updated successfully" });
     } catch (error) {
-        res.status(404).json({ message: "Route not found", data: null, error });
+        return await res.status(404).send({ message: error, data: null, status : 404 });
     }
 }
 
 const deleteNoteController = async (req, res) => {
     try {
-        const deleteId = req.params.id;
+        const deleteId = req.query.id;
         const note = await notesModel.findById(deleteId);
         if(!note) {
             throw new Error('Note does not exist.');
@@ -83,4 +77,4 @@ const latestUpdatedController = async (req, res) => {
     }
 }
 
-export { getAllNotesController, getOneNoteController, addNoteController, updateNoteController, deleteNoteController, latestUpdatedController};
+export { getNotesController, addNoteController, updateNoteController, deleteNoteController, latestUpdatedController};
