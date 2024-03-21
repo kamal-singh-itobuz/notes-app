@@ -6,13 +6,10 @@ const registerController = async (req, res) => {
     try {
         const { name, email, password } = req.body;
         if (!name || !email || !password) {
-            res.status(400);
             throw new Error('All fields are mandatory');
         }
         const userAvailabe = await usersModel.find({ email });
-        
-        if (userAvailabe) {
-            res.status(400);
+        if (!userAvailabe) {
             throw new Error('User already Exists');
         }
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -20,11 +17,10 @@ const registerController = async (req, res) => {
         await user.save();
         if (user) res.status(201).json({ message: "User Created", name, email });
         else {
-            res.status(400);
             throw new Error('User details is not valid!!!');
         }
     } catch (error) {
-        res.status(404).json({ error: 404, message: "Route not found." });
+        res.status(400).json({message: error});
     }
 }
 
@@ -32,12 +28,10 @@ const loginController = async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) {
-            res.status(404);
             throw new Error('All fields are mandatory');
         }
         const user = await usersModel.findOne({ email });
         if (!user) {
-            res.status(404);
             throw new Error('You have to register first');
         }
         const comparePasswords = await bcrypt.compare(password, user.password);
@@ -48,12 +42,11 @@ const loginController = async (req, res) => {
             res.status(200).json({ accessToken: accessToken });
         }
         else {
-            res.status(400);
             throw new Error('Email or Password is wrong');
         }
 
     } catch (error) {
-        res.status(404).json({ error: 404, message: "Route not found." });
+        res.status(404).json({message: error });
     }
 }
 const currentUserController = async (req, res) => {

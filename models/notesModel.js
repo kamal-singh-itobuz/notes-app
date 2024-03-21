@@ -14,7 +14,7 @@ const notesSchema = new mongoose.Schema({
         type: String,
         required: true
     }
-});
+}, {timestamps: true});
 
 const notesModel = mongoose.model("notes", notesSchema);
 export default notesModel;
