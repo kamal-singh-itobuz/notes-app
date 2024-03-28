@@ -38,7 +38,7 @@ const loginController = async (req, res) => {
         if (comparePasswords) {
             const accessToken = jwt.sign({
                 id: user._id
-            }, process.env.ACCESS_TOKEN_KEY, { expiresIn: '120m' });
+            }, process.env.ACCESS_TOKEN_KEY, { expiresIn: '540m' });
             res.status(200).json({ accessToken: accessToken });
         }
         else {

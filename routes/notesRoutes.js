@@ -6,7 +6,7 @@ const router = Router();
 router.use(tokenValidateHandler);
 router.get('/latest-three', latestUpdatedController);
 router.get('/search', getNotesController);
-router.get('/hide', hideNotesController);
+router.put('/hide', hideNotesController);
 router.post('/upload', addNoteController);
 router.put('/update', updateNoteController);
 router.delete('/delete', deleteNoteController);

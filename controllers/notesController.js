@@ -6,16 +6,21 @@ const getNotesController = async (req, res) => {
             const value = req.query.search;
             const searchRegex = new RegExp(value, 'i');
             const data = (await notesModel.find({title: {$regex: searchRegex}, user_id: req.id}));
-            return res.status(200).json({ message: `Result for search ${value} `, data: data }); 
+            return res.status(200).send({ message: `Result for search ${value} `, data: data }); 
         }
         else if(req.query.id) {
             const oneId = req.query.id;
             const oneNote = await notesModel.findOne({_id: oneId, user_id: req.id});
             return res.status(200).send({ message: "Note found successfully", data: oneNote });
         }
-        const allNotes = await notesModel.find({user_id: req.id}); //here req.id, we are sending after successful token verification of a current user
-        res.status(200).json({ message: "All notes fetched", data: allNotes });
-        
+        else if(req.query.hidden) {
+            const hiddenNotes = await notesModel.find({user_id: req.id, isHide: true});
+            return res.status(200).send({message: "All Hidden Notes", data: hiddenNotes});
+        }
+        else if(req.query.visible) {
+            const visibleNotes = await notesModel.find({user_id: req.id, isHide: false}); //here req.id, we are sending after successful token verification of a current user
+            return res.status(200).send({message: "All Non-Hidden Notes", data: visibleNotes});
+        }        
     } catch (error) {
         res.status(404).json({ message: "Route not found", data: null, error });
     }
@@ -27,15 +32,14 @@ const addNoteController = async (req, res) => {
         console.log(obj);
         const alreadyPresent = await notesModel.findOne({ title: obj.title });
         if (alreadyPresent) {
-            res.status(400).json({ message: "Note is already added" });
-            return;
+            return res.status(400).json({ message: "Note is already added" });
         }
         // here req.id is coming after token validation
         const newNote = new notesModel({ ...obj, user_id: req.id });
         await newNote.save();
-        res.status(201).json({ message: "Note Created!", data: newNote });
+        return res.status(201).send({ message: "Note Created!", data: newNote });
     } catch (error) {
-        res.status(404).json({ message: "Route not found", data: null, error });
+        return res.status(404).send({ message: "Route not found", data: null, error });
     }
 }
 
@@ -56,47 +60,43 @@ const updateNoteController = async (req, res) => {
 
 const deleteNoteController = async (req, res) => {
     try {
-        const deleteId = req.query.id;
-        console.log(deleteId);
-        const note = await notesModel.findById(deleteId);
-        if(!note) {
-            throw new Error('Note does not exist.');
-        }
-        if(note.user_id.toString() !== req.id) throw new Error("You don't have permission to delete this note");
-        
+        const deleteId = req.query.id;        
         if(Array.isArray(deleteId)) {
-            console.log(deleteId);
-            await notesModel.remove({user_id: req.id, id: {$in: deleteId}});
+            await notesModel.deleteMany({user_id: req.id, _id: {$in: deleteId}});
+            return res.status(200).send({ message: "Multiple Notes Deleted successfully" });
         }
-        else await notesModel.deleteOne({_id: deleteId});
-        res.status(200).json({ message: "Note Deleted successfully" });
+        else {
+            await notesModel.deleteOne({user_id: req.id, _id: deleteId});
+            return res.status(200).send({ message: "Single Note Deleted successfully" });
+        }
+        
     } catch (error) {
-        res.status(404).json({ message: "Route not found", data: null, error });
+        return res.status(404).send({ message: "Route not found", data: null, error });
     }
 }
 
 const latestUpdatedController = async (req, res) => {
     try {
         const data = await notesModel.find().sort({updatedAt: -1}).limit(3);
-        res.status(200).json({ message: "Last three updated", data: data});
+        return res.status(200).send({ message: "Last three updated", data: data});
     } catch (error) {
-        res.status(404).json({ message: "Route not found", data: null});
+        return res.status(404).send({ message: "Route not found", data: null});
     }
 }
 
 const hideNotesController = async (req, res) => {
     try {
-        if(req.query.hidden === "true"){
-            const hiddenNotes = await notesModel.find({isHide: true, user_id: req.id});
-            res.status(200).json({ message: "Hidded Notes", data: hiddenNotes }); 
+        const hideIds = req.query.hide_id;
+        if(Array.isArray(hideIds)){
+            await notesModel.updateMany({user_id: req.id, _id: {$in : hideIds}}, {$set: {isHide: true}});
+            return res.status(200).send({message: "Multiple Soft Delete or Hide successfull"});
         }
-        else if(req.query.visible === "true"){
-            const visibleNotes = await notesModel.find({isHide: false, user_id: req.id});
-            res.status(200).json({ message: "Visible Notes", data: visibleNotes }); 
+        else {
+            await notesModel.updateOne({user_id: req.id, _id: hideIds}, {$set: {isHide: true}});
+            return res.status(200).send({message: "Single Soft Delete or Hide successfull"});
         }
-        else throw new Error ("Give Hidden or Visible ");
     } catch (error) {
-        res.status(404).json({message: error});
+        return res.status(404).json({message: error});
     }
 }
 
